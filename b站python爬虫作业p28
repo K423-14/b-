@@ -1,0 +1,42 @@
+import requests
+from lxml import etree
+import os
+
+if __name__ == '__main__':
+    headers = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                             'Chrome/84.0.4147.89 Safari/537.36 SLBrowser/7.0.0.12151 SLBChan/30'}
+    # 创建一个文件夹
+    if not os.path.exists("./pptLibs"):
+        os.mkdir("./pptLibs")
+    # 第一个循环用来跳转网页
+    # 爬取页面源码
+    for i in range(1, 762):
+        if i == 1:
+            url = 'https://sc.chinaz.com/ppt/free.html'
+        else:
+            url = 'https://sc.chinaz.com/ppt/free_%d.html' % i
+        print(url)
+        response = requests.get(url=url, headers=headers)
+        # print(response.text)  # 利用这个发现爬取到的网页和开发者看到的网页不同，很奇怪。。。求大佬介绍
+        page_text = response.content.decode()
+        tree = etree.HTML(page_text)
+        # print(tree)  # 初步推测网页爬取没有出现问呢
+        div_list = tree.xpath('//div[@class="ppt-list "]/div')  # 扒取出现问题,很有趣，估计是反扒机制的原因 xpath('//div[@class="item
+        # masonry-brick"]')看来是不行了
+        # print(div_list)
+        for div in div_list:
+            ppt_url = 'https://sc.chinaz.com/' + div.xpath('./div[2]/a/@href')[0]
+            ppt_name = div.xpath('./div[2]/a/text()')[0]
+            # print(ppt_url, ppt_name)
+            response = requests.get(url=ppt_url, headers=headers)
+            page_text = response.content.decode()
+            # print(page_text)
+            tree = etree.HTML(page_text)
+            ppt_rar = tree.xpath('//div[@class="bot clearfix"]/div[1]/a[1]/@href')[0]  # 这个[
+            # 0]代表列表中的第一个字符串，不写这个网页链接的字符串就会变成列表导致数据形式出现问题，调包也是要根据人家的格式来┗|｀O′|┛ 嗷~~
+            ppt_data = requests.get(url=ppt_rar, headers=headers).content
+            # print(ppt_rar)
+            ppt_path = 'pptLibs/' + ppt_name + '.rar'
+            with open(ppt_path, 'wb') as fp:
+                fp.write(ppt_data)
+                print(ppt_name + '下载完成！！！')
